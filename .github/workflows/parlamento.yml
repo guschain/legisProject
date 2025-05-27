@@ -2,45 +2,41 @@ name: Atualizar dados Parlamento
 
 on:
   schedule:
-    - cron: "0 3 * * *"       # todos os dias às 03:00 UTC
-  workflow_dispatch:         # permite disparar manualmente
+    - cron: '0 3 * * *'        # todos os dias 03-h UTC
+  workflow_dispatch:
 
 jobs:
-  scrape:
+  build-and-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write        # para permitir git push
+      contents: write          # criar/atualizar release e assets
 
     steps:
-      # 1) Clone o repositório
-      - uses: actions/checkout@v4
+    # 1) checkout somente o código
+    - uses: actions/checkout@v4
 
-      # 2) Build & run dentro do mesmo DevContainer do VS Code
-      - name: Executar dentro do DevContainer
-        uses: devcontainers/ci@v0.3
-        with:
-          # caminho padrão para devcontainer.json
-          devcontainerPath: .devcontainer
-          runCmd: |
-            # instalar dependências conforme postCreateCommand local
-            pip install --no-cache-dir -r requirements.txt
-            # rodar o scraper
-            python scripts/parlamento_scraper.py
-          push: never
+    # 2) Gera os CSVs dentro do DevContainer
+    - name: Executar dentro do DevContainer
+      uses: devcontainers/ci@v0.3
+      with:
+        devcontainerPath: .devcontainer
+        runCmd: |
+          pip install --no-cache-dir -r requirements.txt
+          python scripts/parlamento_scraper.py
+        push: never            # não faz push da imagem
 
-      # 3) Commit & push se houver novas ou modificadas CSVs
-      - name: Commit & push se houver alterações
-        run: |
-          git config user.name  "github-actions"
-          git config user.email "github-actions@github.com"
+    # 3) Garante que o release “latest-data” exista (cria se precisar)
+    - name: Criar release rolling (se necessário)
+      run: |
+        set -e
+        if ! gh release view latest-data &>/dev/null; then
+          gh release create latest-data \
+            --title "Últimos dados do Parlamento" \
+            --notes "Artefatos CSV atualizados diariamente" \
+            --prerelease
+        fi
 
-          # stage dos CSVs (novos e modificados)
-          git add data/*.csv
-
-          # verifica se algo foi adicionado ao índice
-          if git diff --cached --quiet; then
-            echo "Nenhuma alteração detectada."
-          else
-            git commit -m "Atualização automática dos dados do Parlamento"
-            git push
-          fi
+    # 4) Envia (ou sobrescreve) cada CSV como asset
+    - name: Publicar CSVs como assets
+      run: |
+        gh release upload latest-data data/*.csv --clobber   # overwrite se já existir :contentReference[oaicite:0]{index=0}
