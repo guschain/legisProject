@@ -2,46 +2,41 @@ name: Atualizar dados Parlamento
 
 on:
   schedule:
-    - cron: "0 3 * * *"          # todos os dias às 03:00 UTC
-  workflow_dispatch:              # botão “Run workflow” manual
+    - cron: "0 3 * * *"       # todos os dias às 03:00 UTC
+  workflow_dispatch:         # permite disparar manualmente
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
     permissions:
-      contents: write             # necessário para fazer push
+      contents: write        # para permitir git push
 
     steps:
+      # 1) Clone o repositório
       - uses: actions/checkout@v4
 
-      - name: Instalar Python
-        uses: actions/setup-python@v4
+      # 2) Build & run dentro do mesmo DevContainer do VS Code
+      - name: Executar dentro do DevContainer
+        uses: devcontainers/ci@v0.3
         with:
-          python-version: "3.11"
+          # caminho padrão para devcontainer.json
+          devcontainerPath: .devcontainer
+          runCmd: |
+            # instalar dependências conforme postCreateCommand local
+            pip install --no-cache-dir -r requirements.txt
+            # rodar o scraper
+            python scripts/parlamento_scraper.py
 
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Instalar dependências
-        run: pip install requests beautifulsoup4 pandas
-
-      - name: Executar scraper
-        run: python scripts/parlamento_scraper.py
-
+      # 3) Commit & push se houver novas ou modificadas CSVs
       - name: Commit & push se houver alterações
         run: |
           git config user.name  "github-actions"
           git config user.email "github-actions@github.com"
 
-          # 1) stage new or modified CSVs
+          # stage dos CSVs (novos e modificados)
           git add data/*.csv
 
-          # 2) did staging actually add/change anything?
+          # verifica se algo foi adicionado ao índice
           if git diff --cached --quiet; then
             echo "Nenhuma alteração detectada."
           else
