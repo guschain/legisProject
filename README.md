@@ -15,7 +15,8 @@ The scraper retrieves and processes three main categories of parliamentary data:
 # 🔁 Daily Automation
 
 A GitHub Actions workflow runs every day at 03:00 UTC, regenerating the .csv files and uploading them as assets to the latest release (latest-data). These are available for use without bloating the Git repository.
-🔧 Future: ETL and Dataset Publishing
+
+# 🔧 Future: ETL and Dataset Publishing
 
 The next phase will perform ETL (Extract, Transform, Load) steps to:
 
