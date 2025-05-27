@@ -37,10 +37,14 @@ jobs:
         run: |
           git config user.name  "github-actions"
           git config user.email "github-actions@github.com"
-          if git diff --quiet; then
+
+          # 1) stage new or modified CSVs
+          git add data/*.csv
+
+          # 2) did staging actually add/change anything?
+          if git diff --cached --quiet; then
             echo "Nenhuma alteração detectada."
           else
-            git add data/*.csv
             git commit -m "Atualização automática dos dados do Parlamento"
             git push
           fi
