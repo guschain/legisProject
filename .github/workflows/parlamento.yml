@@ -2,20 +2,32 @@ name: Atualizar dados Parlamento
 
 on:
   schedule:
-    - cron: '0 3 * * *'        # todos os dias 03-h UTC
+    - cron: '0 3 * * *'    # todos os dias 03-h UTC
   workflow_dispatch:
 
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write          # criar/atualizar release e assets
+      contents: write       # criar/atualizar release e assets
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # torna o token visível ao gh CLI
 
     steps:
-    # 1) checkout somente o código
+    # 1) Checkout somente o código (sem CSVs)
     - uses: actions/checkout@v4
 
-    # 2) Gera os CSVs dentro do DevContainer
+    # 2) Baixa os CSVs atuais da release rolling (se existir)
+    - name: Baixar assets existentes
+      run: |
+        mkdir -p data
+        if gh release view latest-data &>/dev/null; then
+          gh release download latest-data --pattern '*.csv' --dir data --clobber
+        else
+          echo "Release ainda não existe - executando scrape do zero."
+        fi
+
+    # 3) Executa o scraper dentro do DevContainer
     - name: Executar dentro do DevContainer
       uses: devcontainers/ci@v0.3
       with:
@@ -23,12 +35,11 @@ jobs:
         runCmd: |
           pip install --no-cache-dir -r requirements.txt
           python scripts/parlamento_scraper.py
-        push: never            # não faz push da imagem
+        push: never
 
-    # 3) Garante que o release “latest-data” exista (cria se precisar)
+    # 4) Garante que o release rolling exista
     - name: Criar release rolling (se necessário)
       run: |
-        set -e
         if ! gh release view latest-data &>/dev/null; then
           gh release create latest-data \
             --title "Últimos dados do Parlamento" \
@@ -36,7 +47,13 @@ jobs:
             --prerelease
         fi
 
-    # 4) Envia (ou sobrescreve) cada CSV como asset
+    # 5) Publica / sobrescreve cada CSV
     - name: Publicar CSVs como assets
       run: |
-        gh release upload latest-data data/*.csv --clobber   # overwrite se já existir :contentReference[oaicite:0]{index=0}
+        shopt -s nullglob            # evita erro se não houver CSV
+        csvs=(data/*.csv)
+        if [ ${#csvs[@]} -gt 0 ]; then
+          gh release upload latest-data "${csvs[@]}" --clobber
+        else
+          echo "Nenhum CSV gerado; nada para publicar."
+        fi
