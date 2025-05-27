@@ -26,6 +26,7 @@ jobs:
             pip install --no-cache-dir -r requirements.txt
             # rodar o scraper
             python scripts/parlamento_scraper.py
+          push: false
 
       # 3) Commit & push se houver novas ou modificadas CSVs
       - name: Commit & push se houver alterações
