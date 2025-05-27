@@ -45,7 +45,7 @@ Or use them directly in Python:
 import pandas as pd
 
 df = pd.read_csv(
-    "https://github.com/<owner>/<repo>/releases/download/latest-data/Atividades.csv"
+    "https://github.com/guschain/legisProject/releases/download/latest-data/AtividadesXVI_json_txt.csv"
 )
 
 💡 Motivation
