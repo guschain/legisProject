@@ -14,4 +14,4 @@ jobs:
       - uses: devcontainers/ci@v0.3
         with:
           runCmd: echo "Container built successfully"
-          push: false # disable image push so imageName is not required
+          push: never # disable image push so imageName is not required
